@@ -10,9 +10,11 @@ var (
 	// Server config
 	ServerPort = ":" + getEnv("PORT", "8080")
 
+	// Application environment: "dev", "staging", "production"
+	AppEnv = getEnv("APP_ENV", "dev")
+
 	// JWT config
-	JWTSecret       = getEnv("JWT_SECRET", "dev-secret-change-in-production")
-	TokenExpiration = int64(24 * 60 * 60) // 24 hours in seconds
+	JWTSecret = getEnv("JWT_SECRET", "dev-secret-change-in-production")
 
 	// DynamoDB config
 	AWSRegion    = getEnv("AWS_REGION", "us-east-1")
@@ -38,6 +40,11 @@ var (
 	TypeGame  = "game"
 )
 
+const defaultJWTSecret = "dev-secret-change-in-production"
+
+// TokenExpiration is the JWT lifetime in seconds (24 hours)
+const TokenExpiration = int64(24 * 60 * 60)
+
 var (
 	// Valid statuses for library items
 	ValidStatuses = map[string]bool{
@@ -54,6 +61,14 @@ var (
 		TypeGame:  true,
 	}
 )
+
+// ValidateConfig fails fast on unsafe production configuration.
+// Call it from main so a misconfigured deployment never starts.
+func ValidateConfig() {
+	if AppEnv != "dev" && JWTSecret == defaultJWTSecret {
+		panic("refusing to start with the default JWT_SECRET outside the dev environment")
+	}
+}
 
 // getEnv returns the value of an environment variable or a fallback
 func getEnv(key, fallback string) string {

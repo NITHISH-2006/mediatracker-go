@@ -1,7 +1,7 @@
 # Amazon Q Developer — Usage Guide (Proof of Agent)
 
 This file documents every AWS-connected action performed with a coding agent.
-Keep this updated and add screenshots to `hackathon-docs/amazon-q-screenshots/`.
+Keep this updated and add screenshots to `hackathon-docs/agent-proof/amazon-q-screenshots/`.
 
 ## What Goes in the Screenshots
 
@@ -41,13 +41,12 @@ MediaTracker DynamoDB tables (GetItem, PutItem, Query, Scan, DeleteItem,
 UpdateItem) and publish logs to CloudWatch.
 ```
 
-### 3. Deploy Go Binary as Lambda
+### 3. Deploy SAM Stack (Lambda + API Gateway)
 ```
-I built my Go API binary (bootstrap). Walk me through deploying it as an
-AWS Lambda function behind an API Gateway HTTP API with CORS enabled so a
-React app on Amplify can call it. Include the runtime, handler, memory,
-timeout, and environment variables. I'm using the container image
-public.ecr.aws/lambda/provided:al2023.
+I have a SAM template at template.yaml for my Go API: 3 DynamoDB tables with GSIs,
+a Lambda function (container image on provided.al2023), and an HTTP API with CORS.
+Walk me through `sam build --use-container` and `sam deploy --guided`, then confirm
+the generated API URL. Verify the IAM policy scopes DynamoDB to MediaTracker-* only.
 ```
 
 ### 4. Debug Lambda → DynamoDB

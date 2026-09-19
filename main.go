@@ -10,6 +10,8 @@ import (
 )
 
 func main() {
+	config.ValidateConfig()
+
 	store, err := storage.NewStore()
 	if err != nil {
 		log.Fatalf("❌ Failed to initialize storage: %v\n", err)

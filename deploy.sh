@@ -20,6 +20,7 @@ STACK_NAME="media-tracker"
 REGION="${AWS_REGION:-us-east-1}"
 ENV="${ENVIRONMENT:-dev}"
 JWT_SECRET="${JWT_SECRET:-$(openssl rand -hex 32)}"
+ALLOWED_ORIGIN="${ALLOWED_ORIGIN:-\*}"
 
 echo "==> Deploying MediaTracker stack '$STACK_NAME' to $REGION (env=$ENV)"
 
@@ -32,7 +33,7 @@ sam deploy \
   --region "$REGION" \
   --capabilities CAPABILITY_IAM \
   --parameter-overrides \
-    "Environment=$ENV JWTSecret=$JWT_SECRET" \
+    "Environment=$ENV JWTSecret=$JWT_SECRET AllowedOrigin=$ALLOWED_ORIGIN" \
   --no-confirm-changeset
 
 echo ""

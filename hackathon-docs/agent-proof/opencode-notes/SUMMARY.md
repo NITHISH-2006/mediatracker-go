@@ -28,6 +28,17 @@ in-memory Go API into a deployed full-stack app via these steps:
 - "Scaffold a React + Vite + Tailwind frontend with login/library/dashboard/search/add-media/recommendations."
 - "Create a SAM template + Dockerfile + amplify.yml for deployment."
 - "Refactor the router so the local server and Lambda handler share the same wiring."
+- "Do all the things needed to complete the project: security hardening, recommendation scoring upgrade, media profile analytics."
+
+## Second Pass (security + product)
+
+- Added `config.ValidateConfig()` — refuses to start outside dev with the default JWT secret.
+- Parametrized CORS: `AllowedOrigin` stack Parameter → Lambda env + API Gateway CORS
+  (prod must use the Amplify domain, not `*`).
+- Rewrote recommendations: weighted genre scoring (Completed counts ×2), sorted top picks,
+  individual "why" reasons per title.
+- Extended dashboard: `media_profile` (anime/movie/game counts) + `completion_rate`.
+- Fixed a superfluous `WriteHeader` in the register handler.
 
 ## Free-Tier-Friendly Decisions
 

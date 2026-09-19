@@ -36,8 +36,11 @@ export interface DashboardResponse {
   total_watching: number
   total_planned: number
   total_dropped: number
+  total_items: number
+  completion_rate: number
   favorite_genres: Record<string, number>
   library_summary: Record<string, number>
+  media_profile: Record<string, number>
 }
 
 export interface RecommendedItem {

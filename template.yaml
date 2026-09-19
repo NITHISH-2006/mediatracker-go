@@ -6,10 +6,19 @@ Parameters:
   Environment:
     Type: String
     Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
   JWTSecret:
     Type: String
     NoEcho: true
-    Description: Secret used to sign JWT tokens
+    MinLength: 32
+    Description: Secret used to sign JWT tokens (generate with `openssl rand -hex 32`)
+  AllowedOrigin:
+    Type: String
+    Default: '*'
+    Description: CORS origin. Use your Amplify URL (https://<app>.amplifyapp.com) for prod.
 
 Globals:
   Function:
@@ -128,12 +137,13 @@ Resources:
       CodeUri: .
       Environment:
         Variables:
+          APP_ENV: !Ref Environment
           USERS_TABLE: !Ref UsersTable
           MEDIA_TABLE: !Ref MediaTable
           LIBRARY_TABLE: !Ref LibraryTable
           JWT_SECRET: !Ref JWTSecret
           AWS_REGION: !Ref AWS::Region
-          ALLOWED_ORIGINS: '*'
+          ALLOWED_ORIGINS: !Ref AllowedOrigin
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Sub MediaTracker-*-${Environment}*
@@ -162,8 +172,7 @@ Resources:
     Properties:
       StageName: prod
       CorsConfiguration:
-        AllowOrigins:
-          - '*'
+        AllowOrigins: [!Ref AllowedOrigin]
         AllowMethods:
           - GET
           - POST

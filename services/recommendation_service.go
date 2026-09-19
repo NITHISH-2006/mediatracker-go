@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/yourusername/mediatracker-go/models"
@@ -24,57 +25,92 @@ func NewRecommendationService(store *storage.Store, ls *LibraryService, ms *Medi
 	}
 }
 
-// GetRecommendations generates recommendations based on user's library
+// genrePref is a weighted genre preference for a user.
+// weight counts how strongly the user cares about the genre:
+// Completed items count double vs. currently Watching.
+type genrePref struct {
+	genre  string
+	weight int
+}
+
+// GetRecommendations generates scored recommendations based on the user's library.
+// Unseen media is scored by how strongly it matches the user's weighted genre
+// preferences; the highest-scoring titles are returned with an explanation.
 func (rs *RecommendationService) GetRecommendations(userID string) (*models.RecommendationResponse, error) {
-	// Get user's favorite genres from completed and watching items
-	favoriteGenres := rs.getUserFavoriteGenres(userID)
-	if len(favoriteGenres) == 0 {
-		// If no favorites yet, return popular recommendations
+	prefs := rs.getUserGenrePreferences(userID)
+	if len(prefs) == 0 {
 		return &models.RecommendationResponse{
 			RecommendedMedia: []models.RecommendedItem{},
 		}, nil
 	}
 
-	// Get all media
 	allMedia, err := rs.ms.GetAllMedia()
 	if err != nil {
 		return nil, err
 	}
 
-	// Get user's media IDs to exclude what they already have
+	// Exclude media already in the user's library
 	userMediaIDs := rs.store.GetMediaIDsForUser(userID)
-	userMediaMap := make(map[string]bool)
+	userMediaMap := make(map[string]bool, len(userMediaIDs))
 	for _, id := range userMediaIDs {
 		userMediaMap[id] = true
 	}
 
-	// Find recommendations
-	var recommendations []models.RecommendedItem
+	// Build a lookup of genre -> weight for scoring
+	scoreByGenre := make(map[string]int, len(prefs))
+	for _, p := range prefs {
+		scoreByGenre[p.genre] = p.weight
+	}
+
+	type scored struct {
+		item    models.RecommendedItem
+		score   int
+		matched []genrePref // genres that matched, with weights
+	}
+	var candidates []scored
+
 	for _, media := range allMedia {
-		// Skip if user already has this media
 		if userMediaMap[media.ID] {
 			continue
 		}
 
-		// Check if media matches user's favorite genres
-		matchCount := 0
-		for _, genre := range media.Genres {
-			if favoriteGenres[strings.ToLower(genre)] {
-				matchCount++
-			}
+		score, matched := mediaScore(media.Genres, scoreByGenre, prefs)
+		if score == 0 {
+			continue
 		}
 
-		// If there's a genre match, add to recommendations (limit to 10)
-		if matchCount > 0 && len(recommendations) < 10 {
-			matchReason := fmt.Sprintf("Based on your %s interests", rs.getMostFrequentGenre(favoriteGenres))
-			recommendations = append(recommendations, models.RecommendedItem{
-				ID:          media.ID,
-				Title:       media.Title,
-				MediaType:   media.MediaType,
-				Genres:      media.Genres,
-				MatchReason: matchReason,
-			})
+		candidates = append(candidates, scored{
+			item: models.RecommendedItem{
+				ID:        media.ID,
+				Title:     media.Title,
+				MediaType: media.MediaType,
+				Genres:    media.Genres,
+			},
+			score:   score,
+			matched: matched,
+		})
+	}
+
+	// Sort by score descending; stable so ties keep insertion order
+	sort.SliceStable(candidates, func(i, j int) bool {
+		return candidates[i].score > candidates[j].score
+	})
+
+	// Keep the top 10
+	if len(candidates) > 10 {
+		candidates = candidates[:10]
+	}
+
+	recommendations := make([]models.RecommendedItem, 0, len(candidates))
+	for i, c := range candidates {
+		topGenre := ""
+		topWeight := 0
+		if len(prefs) > 0 {
+			topGenre = prefs[0].genre
+			topWeight = prefs[0].weight
 		}
+		c.item.MatchReason = rs.buildMatchReason(c.matched, topGenre, topWeight, i == 0)
+		recommendations = append(recommendations, c.item)
 	}
 
 	return &models.RecommendationResponse{
@@ -82,46 +118,96 @@ func (rs *RecommendationService) GetRecommendations(userID string) (*models.Reco
 	}, nil
 }
 
-// ==================== HELPER FUNCTIONS ====================
-
-// getUserFavoriteGenres extracts genres from user's completed and watching items
-func (rs *RecommendationService) getUserFavoriteGenres(userID string) map[string]bool {
-	favoriteGenres := make(map[string]bool)
-
-	// Get completed items
-	completed, _ := rs.ls.GetUserLibraryByStatus(userID, "Completed")
-	for _, item := range completed {
-		media, _ := rs.ms.GetMediaByID(item.MediaID)
-		if media != nil {
-			for _, genre := range media.Genres {
-				favoriteGenres[strings.ToLower(genre)] = true
-			}
+// mediaScore returns how well a media item matches the user's genre
+// preferences, plus which genres matched (with their weights).
+func mediaScore(mediaGenres []string, scoreByGenre map[string]int, prefs []genrePref) (int, []genrePref) {
+	score := 0
+	var matched []genrePref
+	for _, g := range mediaGenres {
+		if w, ok := scoreByGenre[strings.ToLower(g)]; ok {
+			score += w
+			matched = append(matched, genrePref{genre: strings.ToLower(g), weight: w})
 		}
 	}
-
-	// Get watching items
-	watching, _ := rs.ls.GetUserLibraryByStatus(userID, "Watching")
-	for _, item := range watching {
-		media, _ := rs.ms.GetMediaByID(item.MediaID)
-		if media != nil {
-			for _, genre := range media.Genres {
-				favoriteGenres[strings.ToLower(genre)] = true
-			}
-		}
-	}
-
-	return favoriteGenres
+	return score, matched
 }
 
-// getMostFrequentGenre returns the most common genre from favorites
-func (rs *RecommendationService) getMostFrequentGenre(favorites map[string]bool) string {
-	if len(favorites) == 0 {
-		return "entertainment"
+// buildMatchReason explains a recommendation in one line.
+// The top recommendation gets the personalized sentence; the rest get a compact reason.
+func (rs *RecommendationService) buildMatchReason(matched []genrePref, topGenre string, topWeight int, isTop bool) string {
+	if len(matched) == 0 {
+		return "You might enjoy this one"
 	}
 
-	// For simplicity, return the first genre
-	for genre := range favorites {
-		return genre
+	if isTop && topGenre != "" {
+		return fmt.Sprintf("Your #1 pick — matches your %s taste (%s)", topGenre, pluralTitles(topWeight/2))
 	}
-	return "entertainment"
+
+	if len(matched) == 1 {
+		return fmt.Sprintf("Matches your %s preference (%s)", matched[0].genre, pluralTitles(matched[0].weight/2))
+	}
+
+	genres := make([]string, 0, len(matched))
+	for _, m := range matched {
+		genres = append(genres, m.genre)
+	}
+	return fmt.Sprintf("You enjoy %s", displayList(genres))
+}
+
+// getUserGenrePreferences builds a weighted genre preference list,
+// sorted by weight descending. Completed titles count double.
+func (rs *RecommendationService) getUserGenrePreferences(userID string) []genrePref {
+	weights := make(map[string]int)
+
+	// Completed items: weight 2
+	if items, err := rs.ls.GetUserLibraryByStatus(userID, "Completed"); err == nil {
+		for _, item := range items {
+			if media, err := rs.ms.GetMediaByID(item.MediaID); err == nil && media != nil {
+				for _, g := range media.Genres {
+					weights[strings.ToLower(g)] += 2
+				}
+			}
+		}
+	}
+
+	// Watching items: weight 1
+	if items, err := rs.ls.GetUserLibraryByStatus(userID, "Watching"); err == nil {
+		for _, item := range items {
+			if media, err := rs.ms.GetMediaByID(item.MediaID); err == nil && media != nil {
+				for _, g := range media.Genres {
+					weights[strings.ToLower(g)] += 1
+				}
+			}
+		}
+	}
+
+	prefs := make([]genrePref, 0, len(weights))
+	for genre, w := range weights {
+		prefs = append(prefs, genrePref{genre: genre, weight: w})
+	}
+
+	sort.Slice(prefs, func(i, j int) bool {
+		return prefs[i].weight > prefs[j].weight
+	})
+
+	return prefs
+}
+
+// pluralTitles renders "1 title" vs "2 titles"
+func pluralTitles(n int) string {
+	if n == 1 {
+		return "1 title"
+	}
+	return fmt.Sprintf("%d titles", n)
+}
+
+// displayList joins genres with ", " and " & " for the last item
+func displayList(items []string) string {
+	if len(items) == 0 {
+		return ""
+	}
+	if len(items) == 1 {
+		return items[0]
+	}
+	return fmt.Sprintf("%s & %s", strings.Join(items[:len(items)-1], ", "), items[len(items)-1])
 }

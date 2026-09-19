@@ -46,13 +46,22 @@ func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 
 	// Count genres
 	genreCount := make(map[string]int)
+	typeCount := make(map[string]int)
 	for _, item := range libraryItems {
 		media, _ := h.mediaService.GetMediaByID(item.MediaID)
 		if media != nil {
 			for _, genre := range media.Genres {
 				genreCount[genre]++
 			}
+			typeCount[media.MediaType]++
 		}
+	}
+
+	// Completion rate (% of library with a Completed status)
+	totalItems := len(libraryItems)
+	completionRate := 0.0
+	if totalItems > 0 {
+		completionRate = float64(statusCounts["Completed"]) / float64(totalItems) * 100
 	}
 
 	// Build response
@@ -61,8 +70,11 @@ func (h *DashboardHandler) GetDashboard(w http.ResponseWriter, r *http.Request) 
 		"total_watching":  statusCounts["Watching"],
 		"total_planned":   statusCounts["Planned"],
 		"total_dropped":   statusCounts["Dropped"],
+		"total_items":     totalItems,
+		"completion_rate": completionRate,
 		"favorite_genres": genreCount,
 		"library_summary": statusCounts,
+		"media_profile":   typeCount,
 	}
 
 	writeJSON(w, http.StatusOK, response)

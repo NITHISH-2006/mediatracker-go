@@ -484,89 +484,55 @@ VITE_API_URL=https://<api-id>.execute-api.<region>.amazonaws.com
 
 ---
 
-## Phase 4 — Backend Deployment (Sep 27–28)
+## Phase 4 — Backend Deployment: SAM + Container Image
 
-### 4.1 Package Go as Lambda
+> **Decision:** Use **one** deployment mechanism — AWS SAM + Lambda container image.
+> The Dockerfile, `template.yaml`, `lambda/main.go` and `deploy.sh` are already in the repo.
+> No zip-archive path is maintained.
+
+### 4.1 What is already built
+- `Dockerfile` — cross-compiles `./lambda` to `linux/amd64`, runs on `provided.al2023`
+- `lambda/main.go` — `chiadapter` wrapper around the shared `router.New(store)`
+- `template.yaml` — SAM template: 3 DynamoDB tables + GSIs, Lambda, HTTP API (CORS)
+- `deploy.sh` — one-command deploy (builds image, packages, deploys, prints API URL)
+
+### 4.2 Deploy (via Amazon Q)
+Give to Amazon Q: *"Review my SAM template in template.yaml and deploy my stack with SAM CLI. I want you to run `sam build --use-container` and `sam deploy --guided`, then confirm the API Gateway URL. Also verify the IAM policy lets the Lambda touch only MediaTracker tables and CloudWatch."*
+
 ```bash
-GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o bootstrap main.go
-zip deployment.zip bootstrap
+# One-command deploy (uses openssl to generate a random JWT secret)
+./deploy.sh
+
+# Or step-by-step:
+sam build --use-container
+sam deploy --guided \
+  --parameter-overrides "Environment=dev JWTSecret=<openssl rand -hex 32> AllowedOrigin=*"
 ```
 
-Alternatively use container image.
+### 4.3 Parameters (secure by default)
+| Parameter | Default | Notes |
+|-----------|---------|-------|
+| `Environment` | `dev` | `dev`/`staging`/`prod`; drives `APP_ENV` |
+| `JWTSecret` | required | `MinLength: 32`; generate with `openssl rand -hex 32`; `NoEcho` |
+| `AllowedOrigin` | `*` | Set to your Amplify URL in prod |
 
-### 4.2 Lambda + API Gateway (via Amazon Q)
-Give to Amazon Q: *"Deploy my Go binary as an AWS Lambda function with API Gateway HTTP API, enable CORS, and connect it to my DynamoDB tables. Provide IAM role and policy."*
+**Prod guard:** the app refuses to start outside `dev` with the default JWT secret
+(`config.ValidateConfig()`), so a mis-deployed stack fails fast instead of shipping weak auth.
 
-**IAM Policy for Lambda:**
-```json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "dynamodb:GetItem",
-                "dynamodb:PutItem",
-                "dynamodb:Query",
-                "dynamodb:Scan",
-                "dynamodb:DeleteItem",
-                "dynamodb:UpdateItem"
-            ],
-            "Resource": "arn:aws:dynamodb:*:*:table/MediaTracker-*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "arn:aws:logs:*:*:*"
-        }
-    ]
-}
-```
+### 4.4 What the SAM stack creates
+- `MediaTracker-Users-<env>`, `MediaTracker-Media-<env>`, `MediaTracker-Library-<env>` (PAY_PER_REQUEST)
+- Lambda `MediaTracker-<env>` with IAM scoped to `MediaTracker-*` tables + CloudWatch logs
+- HTTP API `prod` stage, `ANY /{proxy+}` → Lambda, CORS configured from `AllowedOrigin`
 
-**Environment Variables for Lambda:**
-- `USERS_TABLE=MediaTracker-Users`
-- `MEDIA_TABLE=MediaTracker-Media`
-- `LIBRARY_TABLE=MediaTracker-Library`
-- `JWT_SECRET=<long-random-string>`
-- `AWS_REGION=<region>`
-
-**API Gateway:**
-- Create **HTTP API**
-- Route `ANY /{proxy+}` → Lambda
-- Enable CORS: `*`, methods GET/POST/PUT/DELETE, headers Content-Type/Authorization
-
-### 4.3 Lambda Go Adapter Requirement
-If packaging chi router into Lambda, use `github.com/aws/aws-lambda-go` and `github.com/awslabs/aws-lambda-go-api-proxy/chi`:
-
-```go
-import (
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/awslabs/aws-lambda-go-api-proxy/chi"
-)
-
-var chiLambda *chiadapter.ChiLambda
-
-func init() {
-	// build your chi router here
-	chiLambda = chiadapter.New(router)
-}
-
-func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	return chiLambda.Proxy(req)
-}
-
-func main() {
-	lambda.Start(Handler)
-}
+### 4.5 Verify the public API
+```bash
+curl https://<api-id>.execute-api.<region>.amazonaws.com/health
+# => {"status":"ok"}
 ```
 
 ---
 
-## Phase 5 — Frontend Deployment: Amplify (Sep 28–30)
+## Phase 5 — Frontend Deployment: Amplify (Sep 25)
 
 ### 5.1 Connect GitHub
 1. Push `frontend/` to GitHub repo
@@ -574,6 +540,7 @@ func main() {
 3. Connect GitHub repo → branch `aws-zero-to-shipped`
 
 ### 5.2 Build Settings
+`amplify.yml` is already in the repo root — Amplify uses it automatically:
 ```yaml
 version: 1
 frontend:
@@ -602,25 +569,24 @@ frontend:
 
 ---
 
-## Phase 6 — Polish (Days 11–12 / Oct 1)
+## Phase 6 — Differentiators & Polish (Sep 26–29)
 
-### 6.1 Backend Polish
-- [ ] Consistent error responses
-- [ ] Health check endpoint
-- [ ] Request logging with request IDs
+### 6.1 Already added
+- ✅ **Personalized recommendations with "why"** — weighted genre scoring; the #1 pick says
+  *"Your #1 pick — matches your fantasy taste (2 titles)"* instead of a generic genre match.
+- ✅ **Media Profile analytics** on the dashboard — anime/movie/game counts, completion rate bar.
+- ✅ **Consistent error responses + `/health`** endpoint.
 
-### 6.2 Frontend Polish
-- [ ] Loading skeletons
-- [ ] Error toasts
-- [ ] Responsive mobile-first
-- [ ] Empty states
-- [ ] Feature: "Recently Added" on dashboard
+### 6.2 Remaining polish (nice-to-have)
+- [ ] Error toasts instead of inline errors
+- [ ] Mobile testing pass
+- [ ] Feature: "Recently Added" section on dashboard home
 
 ### 6.3 Documentation for Builder Center Submission
 
 **Builder Center Project Page Must Include:**
 1. **Live URL**: `https://<app-id>.amplifyapp.com`
-2. **Coding Agent Proof**: 5–10 screenshots (Amazon Q taking AWS actions)
+2. **Coding Agent Proof**: 5–10 screenshots (agent taking AWS actions)
 3. **Architecture Diagram**
 4. **Tech Stack**: Go, React, DynamoDB, Lambda, API Gateway, Amplify
 5. **Category**: Daily Life Enhancement
@@ -629,12 +595,56 @@ frontend:
 
 ---
 
-## Phase 7 — Final Testing & Submission (Oct 1–2)
+## Phase 7 — Ship Gate & Submission (Sep 26 → Oct 2)
 
-- [ ] E2E test: Register → Login → Add media → Library → Dashboard → Recommendations
+Reach the ship gate EARLY (target: Sep 26), then polish:
+
+```
+https://<app>.amplifyapp.com
+   │ LOADS ✅   REGISTER ✅   LOGIN ✅
+   │ ADD MEDIA ✅  LIBRARY SAVES ✅
+   │ DASHBOARD ✅  RECOMMENDATIONS ✅
+```
+
+- [ ] All of the above working on the live URL
 - [ ] Test on mobile browser
 - [ ] Verify public URL (no VPN)
+- [ ] Confirm eligibility: document what existed before Sep 18 vs. the new full-stack app
 - [ ] Submit to Builder Center before **Oct 2 deadline**
+
+---
+
+## Current Status (updated 2026-09-19)
+
+| Item | Status |
+|------|--------|
+| DynamoDB storage layer (`storage/dynamo.go`) | ✅ Done, E2E verified vs DynamoDB Local |
+| CORS + env config + `/health` | ✅ Done |
+| React frontend (8 pages) | ✅ Done, `npm run build` passes |
+| Lambda entry (`lambda/main.go`) + `router/` | ✅ Done |
+| SAM template + Dockerfile + deploy.sh + amplify.yml | ✅ Done |
+| Recommendations with "why" (weighted scoring) | ✅ Done |
+| Media Profile analytics on dashboard | ✅ Done |
+| Security: prod JWT guard, parametrized CORS | ✅ Done |
+| AWS deployment (live URL) | ⏳ Blocked on AWS account/console — run `./deploy.sh` |
+| Amplify deployment (public URL) | ⏳ Blocked on GitHub+AWS — connect repo in Amplify |
+| Agent proof screenshots | ⏳ Capture Amazon Q doing AWS steps |
+| Eligibility check (what was public pre-Sep 18) | 🚩 MUST CONFIRM before submitting |
+
+---
+
+## Updated Timeline (fast-track — ship gate first)
+
+| Date | Milestone |
+|------|-----------|
+| Sep 19 | Repo audit + code hardening (security, recommendations, profile) — ✅ done |
+| Sep 19–20 | AWS account + Builder profile + agent (Amazon Q) connected |
+| Sep 21 | Backend deploy (`./deploy.sh`) → public API working |
+| Sep 22 | Frontend deploy (Amplify) → **SHIP GATE reached** |
+| Sep 23–28 | Polish, mobile testing, more test data, screenshots |
+| Sep 29–30 | Documentation + agent-proof + testing log |
+| Oct 1 | Builder Center submission finalized |
+| Oct 2 | Final verification + submit (early) |
 
 ---
 
@@ -643,12 +653,13 @@ frontend:
 1. [ ] `GET /health` returns `200` on deployed URL
 2. [ ] Register + Login works on live site
 3. [ ] Adding media to library persists after Lambda cold restart (DynamoDB)
-4. [ ] Dashboard stats render
-5. [ ] Recommendations render
+4. [ ] Dashboard stats render (incl. Media Profile + completion rate)
+5. [ ] Recommendations render with "why" reasons
 6. [ ] Public URL reachable without VPN
-7. [ ] Amazon Q screenshots exist in `hackathon-docs/`
-8. [ ] Builder Center project page complete
-9. [ ] Submitted before deadline
+7. [ ] Coding-agent screenshots exist in `hackathon-docs/agent-proof/`
+8. [ ] Eligibility confirmed (what existed before Sep 18 documented)
+9. [ ] Builder Center project page complete
+10. [ ] Submitted before deadline
 
 ---
 

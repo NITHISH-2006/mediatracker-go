@@ -67,28 +67,76 @@ export default function DashboardPage() {
         <StatCard label="Dropped" value={data.total_dropped} color="bg-red-100 text-red-800" />
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">🎭 Favorite Genres</h2>
-        {genres.length === 0 ? (
-          <p className="text-gray-500 text-sm">
-            No genres yet. Add media to your library to see genre stats.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {genres.map(([genre, count], i) => (
-              <div key={genre} className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700 w-28 text-right">{genre}</span>
-                <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full ${genreColors[i % genreColors.length]}`}
-                    style={{ width: `${(count / maxGenre) * 100}%` }}
-                  />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">🎭 Favorite Genres</h2>
+          {genres.length === 0 ? (
+            <p className="text-gray-500 text-sm">
+              No genres yet. Add media to your library to see genre stats.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {genres.map(([genre, count], i) => (
+                <div key={genre} className="flex items-center gap-3">
+                  <span className="text-sm font-medium text-gray-700 w-28 text-right">{genre}</span>
+                  <div className="flex-1 h-5 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${genreColors[i % genreColors.length]}`}
+                      style={{ width: `${(count / maxGenre) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-sm text-gray-500 w-8">{count}</span>
                 </div>
-                <span className="text-sm text-gray-500 w-8">{count}</span>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">🎯 Your Media Profile</h2>
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <div className="text-center rounded-lg bg-indigo-50 p-3">
+              <p className="text-2xl font-bold text-indigo-800">
+                {data.media_profile?.movie ?? 0}
+              </p>
+              <p className="text-xs text-indigo-600 mt-1">🎬 Movies</p>
+            </div>
+            <div className="text-center rounded-lg bg-pink-50 p-3">
+              <p className="text-2xl font-bold text-pink-800">
+                {data.media_profile?.anime ?? 0}
+              </p>
+              <p className="text-xs text-pink-600 mt-1">📺 Anime</p>
+            </div>
+            <div className="text-center rounded-lg bg-teal-50 p-3">
+              <p className="text-2xl font-bold text-teal-800">
+                {data.media_profile?.game ?? 0}
+              </p>
+              <p className="text-xs text-teal-600 mt-1">🎮 Games</p>
+            </div>
           </div>
-        )}
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Total items tracked</span>
+                <span className="font-semibold text-gray-900">{data.total_items}</span>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-sm text-gray-600 mb-1">
+                <span>Completion rate</span>
+                <span className="font-semibold text-gray-900">
+                  {Math.round(data.completion_rate)}%
+                </span>
+              </div>
+              <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-green-400 to-green-600"
+                  style={{ width: `${data.completion_rate}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
