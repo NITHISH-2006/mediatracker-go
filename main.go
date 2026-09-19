@@ -14,8 +14,11 @@ import (
 )
 
 func main() {
-	// Initialize storage
-	store := storage.NewStore()
+	// Initialize storage (DynamoDB)
+	store, err := storage.NewStore()
+	if err != nil {
+		log.Fatalf("❌ Failed to initialize storage: %v\n", err)
+	}
 
 	// Initialize services
 	authService := services.NewAuthService(store)
@@ -35,6 +38,10 @@ func main() {
 
 	// Global middleware
 	router.Use(middleware.LoggingMiddleware)
+	router.Use(middleware.CORSMiddleware)
+
+	// Health check
+	router.Get("/health", healthCheck)
 
 	// ==================== PUBLIC ROUTES ====================
 	// Authentication routes (no auth required)
@@ -73,4 +80,10 @@ func main() {
 	if err := http.ListenAndServe(config.ServerPort, router); err != nil {
 		log.Fatalf("❌ Server failed: %v\n", err)
 	}
+}
+
+// healthCheck is a simple liveness probe
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"status":"ok"}`))
 }
