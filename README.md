@@ -1,390 +1,172 @@
-# mediatracker-go 🎬🎮🌸
+# MediaTracker 🎬🎮🌸
 
-**Personal Media Tracker for Anime, Movies & Games**
+**Personal Media Tracker for Anime, Movies & Games — Full-Stack on AWS**
 
-A clean, simple REST API to track your entertainment journey. Log what you're watching, maintain different lists, get recommendations, and view your stats.
+Track your entertainment journey. Log what you're watching/playing, maintain lists, get genre-based recommendations, and view your stats.
+
+> **Built for the AWS Zero to Shipped Hackathon.** Go REST API on Lambda + API Gateway, persistent DynamoDB storage, React frontend on Amplify Hosting, developed with AI coding agents (Amazon Q + OpenCode).
 
 ---
 
 ## Features
 
-### ✅ Core Features (Must-Have)
-- **User Authentication**
-  - Register & Login with JWT tokens
-  - Secure password hashing with bcrypt
-  
-- **Media Management**
-  - Add/Search media (Anime, Movies, Games)
-  - Each media has: title, type, genres, year, description
-  - Create and manage your personal library
-  
-- **Personal Library**
-  - Add media with status: `Watching`, `Completed`, `Dropped`, `Planned`
-  - Track progress (episodes watched, hours played)
-  - Update and delete entries
-  
-- **Recommendations**
-  - Genre-based recommendations
-  - Suggests media you haven't completed yet
-  
-- **Dashboard & Stats**
-  - Total completed items count
-  - Favorite genre breakdown
-  - Quick overview of your activity
+- **User Authentication** — Register/Login with JWT + bcrypt
+- **Media Management** — Add/Search anime, movies & games (title, type, genres, year, description)
+- **Personal Library** — Status lists (`Watching`, `Completed`, `Dropped`, `Planned`), progress + notes
+- **Recommendations** — Genre-based suggestions from your Completed/Watching items
+- **Dashboard Stats** — Status counts + favorite genre breakdown
+- **Recently usable web UI** — React + Tailwind, responsive, loading/empty states
 
-### 🚀 Tech Stack
-- **Framework**: Chi Router (lightweight HTTP router)
-- **Authentication**: JWT + bcrypt
-- **Storage**: In-memory (maps and slices)
-- **Middleware**: Authentication & Logging
-- **Language**: Go 1.21+
+## Architecture
 
----
+```
+React (Amplify) ──► API Gateway (HTTP API) ──► Lambda (Go/chi) ──► DynamoDB
+```
+
+| Layer | Tech |
+|-------|------|
+| Frontend | React + Vite + TypeScript + Tailwind (AWS Amplify Hosting) |
+| API | Go 1.26, chi router (AWS Lambda + API Gateway) |
+| Storage | DynamoDB (3 tables + GSIs) |
+| Auth | JWT (HS256) + bcrypt |
+| CI/CD | Amplify (frontend), SAM/AWS CLI (backend) |
 
 ## Project Structure
 
 ```
 mediatracker-go/
-├── go.mod
-├── README.md
-├── main.go                    # Entry point, router setup
-├── config/
-│   └── config.go              # Configuration constants
-├── models/
-│   └── models.go              # Data structures
-├── storage/
-│   └── storage.go             # In-memory storage with mutexes
-├── services/
-│   ├── auth_service.go        # User registration/login logic
-│   ├── media_service.go       # Media CRUD operations
-│   ├── library_service.go     # User library management
-│   └── recommendation_service.go  # Genre-based recommendations
-├── handlers/
-│   ├── auth.go                # Auth endpoints
-│   ├── media.go               # Media endpoints
-│   ├── library.go             # Library endpoints
-│   ├── recommendation.go      # Recommendation endpoint
-│   └── dashboard.go           # Stats/Dashboard endpoint
-└── middleware/
-    ├── auth.go                # JWT validation middleware
-    └── logging.go             # Request logging middleware
+├── main.go                  # Local HTTP server entry point
+├── lambda/main.go           # AWS Lambda handler (chi adapter)
+├── router/                  # Shared router wiring (services+handlers+routes)
+├── config/                  # Env-based configuration
+├── models/                  # Data structures
+├── storage/dynamo.go        # DynamoDB persistence (AWS SDK v2)
+├── services/                # Business logic (auth, media, library, recs)
+├── handlers/                # HTTP handlers
+├── middleware/              # JWT auth, CORS, logging
+├── frontend/                # React + Vite + Tailwind app
+├── template.yaml            # SAM template (tables + Lambda + API Gateway)
+├── Dockerfile               # Builds Lambda container image
+├── deploy.sh                # One-command backend deploy
+└── amplify.yml              # Amplify Hosting build config
 ```
 
----
-
-## Getting Started
+## Local Development
 
 ### Prerequisites
-- Go 1.21 or later
-- curl (for testing endpoints)
+- Go 1.24+
+- Node 20+
+- Docker (for DynamoDB Local)
 
-### Installation
-
+### 1. Start DynamoDB Local
 ```bash
-# Clone or navigate to the project
-cd mediatracker-go
-
-# Download dependencies
-go mod download
-
-# Run the server
-go run main.go
+docker run -d --name dynamodb-local -p 8010:8000 amazon/dynamodb-local
 ```
 
-The API will start on `http://localhost:8080`
+### 2. Create the tables
+```bash
+# Use the create commands in IMPLEMENTATION_PLAN.md (Phase 2.2)
+# pointing --endpoint-url at http://localhost:8010
+```
 
----
+### 3. Run the backend
+```bash
+export AWS_ENDPOINT_URL=http://localhost:8010
+export AWS_ACCESS_KEY_ID=local AWS_SECRET_ACCESS_KEY=local AWS_DEFAULT_REGION=us-east-1
+export JWT_SECRET=dev-secret
+
+go run main.go
+# Server on http://localhost:8080  →  GET /health returns {"status":"ok"}
+```
+
+### 4. Run the frontend
+```bash
+cd frontend
+npm install
+cp .env.example .env   # VITE_API_URL defaults to http://localhost:8080
+npm run dev
+# Open http://localhost:5173
+```
+
+## Configuration (Environment Variables)
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PORT` | `8080` | HTTP port |
+| `JWT_SECRET` | (dev value) | JWT signing secret — **override in prod** |
+| `USERS_TABLE` | `MediaTracker-Users` | Users table name |
+| `MEDIA_TABLE` | `MediaTracker-Media` | Media table name |
+| `LIBRARY_TABLE` | `MediaTracker-Library` | Library table name |
+| `AWS_ENDPOINT_URL` | *(empty)* | DynamoDB Local endpoint override |
+| `ALLOWED_ORIGINS` | `*` | CORS allow-list (comma-separated) |
+
+Frontend: `VITE_API_URL` (defaults to `http://localhost:8080`).
 
 ## API Endpoints
 
-### 🔐 Authentication
+### Public
+- `GET /health` — liveness probe
+- `POST /api/auth/register` — `{username, email, password}`
+- `POST /api/auth/login` — `{email, password}` → `{token, expires_in}`
+- `GET /api/media` — all media
+- `GET /api/media/search?query=Titan` — search by title
+- `GET /api/media/{id}` — media by ID
 
-#### Register User
+### Protected (Authorization: Bearer <token>)
+- `POST /api/media` — add media `{title, media_type, year, genres, description}`
+- `POST /api/library` — add `{media_id, status, progress, notes}`
+- `GET /api/library?status=Watching` — user library (optional status filter)
+- `GET /api/library/{id}` — library item
+- `PUT /api/library/{id}` — update `{status?, progress?, notes?}`
+- `DELETE /api/library/{id}` — remove item
+- `GET /api/recommendations` — genre-based recommendations
+- `GET /api/dashboard` — stats: counts + favorite genres
+
+Status values: `Watching | Completed | Dropped | Planned`
+Media types: `anime | movie | game`
+
+## Deployment
+
+### Backend (SAM — tables, Lambda, API Gateway)
 ```bash
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "anime_fan",
-    "email": "fan@example.com",
-    "password": "securepass123"
-  }'
+./deploy.sh
+# or step-by-step:
+sam build --use-container
+sam deploy --guided
 ```
+The SAM template creates 3 DynamoDB tables, the Lambda function (container image), and an HTTP API with CORS. See `template.yaml`.
 
-**Response:**
-```json
-{
-  "id": "uuid-here",
-  "username": "anime_fan",
-  "email": "fan@example.com",
-  "created_at": "2024-01-15T10:30:00Z"
-}
-```
+### Frontend (Amplify Hosting)
+1. Push this repo to GitHub
+2. AWS Console → Amplify Hosting → Create app → Connect GitHub → branch `aws-zero-to-shipped`
+3. Amplify picks up `amplify.yml` automatically
+4. Add env var: `VITE_API_URL=https://<api-id>.execute-api.<region>.amazonaws.com`
+5. Deploy — you get `https://<app-id>.amplifyapp.com`
 
-#### Login User
-```bash
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "fan@example.com",
-    "password": "securepass123"
-  }'
-```
+## Hackathon Documentation
 
-**Response:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIs...",
-  "expires_in": 86400
-}
-```
-
----
-
-### 🎬 Media Management
-
-#### Add Media
-```bash
-curl -X POST http://localhost:8080/api/media \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -d '{
-    "title": "Attack on Titan",
-    "media_type": "anime",
-    "year": 2013,
-    "genres": ["action", "fantasy", "drama"],
-    "description": "Humanity fights back against giant humanoid creatures"
-  }'
-```
-
-**Response:**
-```json
-{
-  "id": "media-uuid",
-  "title": "Attack on Titan",
-  "media_type": "anime",
-  "year": 2013,
-  "genres": ["action", "fantasy", "drama"],
-  "description": "Humanity fights back against giant humanoid creatures",
-  "created_at": "2024-01-15T11:00:00Z"
-}
-```
-
-#### Search Media
-```bash
-curl -X GET "http://localhost:8080/api/media/search?query=Titan" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
-#### Get All Media
-```bash
-curl -X GET http://localhost:8080/api/media \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
----
-
-### 📚 Personal Library
-
-#### Add Media to Library
-```bash
-curl -X POST http://localhost:8080/api/library \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -d '{
-    "media_id": "media-uuid",
-    "status": "Watching",
-    "progress": 12,
-    "notes": "Amazing series! Currently on episode 12"
-  }'
-```
-
-**Response:**
-```json
-{
-  "id": "library-entry-uuid",
-  "user_id": "user-uuid",
-  "media_id": "media-uuid",
-  "status": "Watching",
-  "progress": 12,
-  "notes": "Amazing series! Currently on episode 12",
-  "added_at": "2024-01-15T11:05:00Z"
-}
-```
-
-#### Update Library Entry
-```bash
-curl -X PUT http://localhost:8080/api/library/library-entry-uuid \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
-  -d '{
-    "status": "Completed",
-    "progress": 25,
-    "notes": "Finished the series!"
-  }'
-```
-
-#### Get My Library
-```bash
-curl -X GET http://localhost:8080/api/library \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
-#### Get Library by Status
-```bash
-curl -X GET "http://localhost:8080/api/library?status=Watching" \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
-#### Delete Library Entry
-```bash
-curl -X DELETE http://localhost:8080/api/library/library-entry-uuid \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
----
-
-### 💡 Recommendations
-
-#### Get Recommendations
-```bash
-curl -X GET http://localhost:8080/api/recommendations \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
-**Response:**
-```json
-{
-  "recommended_media": [
-    {
-      "id": "media-uuid",
-      "title": "My Hero Academia",
-      "media_type": "anime",
-      "genres": ["action", "fantasy"],
-      "match_reason": "Based on your action/fantasy preferences"
-    }
-  ]
-}
-```
-
----
-
-### 📊 Dashboard & Stats
-
-#### Get Dashboard Stats
-```bash
-curl -X GET http://localhost:8080/api/dashboard \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
-```
-
-**Response:**
-```json
-{
-  "total_completed": 5,
-  "total_watching": 3,
-  "total_planned": 8,
-  "favorite_genres": {
-    "action": 3,
-    "drama": 2,
-    "fantasy": 2
-  },
-  "library_summary": {
-    "watching": 3,
-    "completed": 5,
-    "dropped": 1,
-    "planned": 8
-  }
-}
-```
-
----
-
-## Status Values
-
-- **Watching**: Currently watching/playing
-- **Completed**: Finished
-- **Dropped**: Abandoned
-- **Planned**: Want to watch/play
-
----
-
-## Error Responses
-
-All errors follow this format:
-
-```json
-{
-  "error": "Error description",
-  "status": 400
-}
-```
-
-### Common Status Codes
-- `200 OK` - Successful request
-- `201 Created` - Resource created
-- `400 Bad Request` - Invalid input
-- `401 Unauthorized` - Missing/invalid token
-- `404 Not Found` - Resource not found
-- `409 Conflict` - User already exists
-- `500 Internal Server Error` - Server error
-
----
-
-## Example Workflow
-
-```bash
-# 1. Register
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"username": "user1", "email": "user1@test.com", "password": "pass123"}'
-
-# 2. Login and save token
-TOKEN="<token-from-response>"
-
-# 3. Add some media
-curl -X POST http://localhost:8080/api/media \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"title": "Demon Slayer", "media_type": "anime", "year": 2019, "genres": ["action", "fantasy"], "description": "Demon hunter story"}'
-
-# 4. Add to library
-curl -X POST http://localhost:8080/api/library \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $TOKEN" \
-  -d '{"media_id": "<media-id>", "status": "Watching", "progress": 5}'
-
-# 5. Get dashboard
-curl -X GET http://localhost:8080/api/dashboard \
-  -H "Authorization: Bearer $TOKEN"
-
-# 6. Get recommendations
-curl -X GET http://localhost:8080/api/recommendations \
-  -H "Authorization: Bearer $TOKEN"
-```
-
----
+- [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) — full step-by-step process
+- [`hackathon-docs/`](./hackathon-docs/) — agent usage notes + Amazon Q screenshots
+  - `amazon-q-screenshots/` — proof of coding agent doing AWS actions
+  - `opencode-notes/` — prompts and outputs from OpenCode
+  - `architecture/` — architecture diagrams
 
 ## Notes
 
-- All timestamps are in UTC (ISO 8601 format)
-- Passwords are hashed using bcrypt before storage
-- JWT tokens expire after 24 hours
-- In-memory storage means data is lost on server restart (suitable for demo/learning)
-- Thread-safe using sync.RWMutex
-
----
+- All timestamps UTC (RFC 3339)
+- Passwords hashed with bcrypt; JWT expires after 24h
+- DynamoDB tables use `PAY_PER_REQUEST` (Free Tier friendly)
+- Lambda `MemorySize: 512MB`, `Timeout: 10s` — fine for this workload
 
 ## Future Enhancements
 
-- Database persistence (PostgreSQL/MongoDB)
-- Social features (follow users, see their lists)
-- Review & rating system
-- Advanced filtering and sorting
-- User profiles
-- Daily reminder notifications
-- Social sharing
+- Cognito auth instead of custom JWT
+- Elasticsearch/OpenSearch for media search
+- User profiles + social features
+- Reviews + ratings
+- Export library (CSV/JSON)
+- Shareable library links
 
 ---
 
-## License
-
-MIT License - Feel free to use for learning and projects!
+**License**: MIT — free to use for learning and projects
