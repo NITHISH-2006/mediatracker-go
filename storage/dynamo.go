@@ -308,8 +308,8 @@ func (s *Store) GetLibraryItem(id string) (*models.LibraryItem, error) {
 	// We need an index to look up by library item ID alone.
 	// Use Scan with a filter (acceptable for hackathon scale).
 	out, err := s.client.Scan(context.Background(), &dynamodb.ScanInput{
-		TableName:              aws.String(s.libraryTable),
-		FilterExpression:       aws.String("id = :id"),
+		TableName:        aws.String(s.libraryTable),
+		FilterExpression: aws.String("id = :id"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":id": &types.AttributeValueMemberS{Value: id},
 		},
