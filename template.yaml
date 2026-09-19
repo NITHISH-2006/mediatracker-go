@@ -1,0 +1,187 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: MediaTracker backend - Go API on Lambda driven by DynamoDB
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+  JWTSecret:
+    Type: String
+    NoEcho: true
+    Description: Secret used to sign JWT tokens
+
+Globals:
+  Function:
+    Timeout: 10
+    MemorySize: 512
+    Runtime: provided.al2023
+    Tracing: Active
+
+Resources:
+  # ==================== DynamoDB Tables ====================
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub MediaTracker-Users-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  MediaTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub MediaTracker-Media-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  LibraryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub MediaTracker-Library-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: GSI1PK
+          AttributeType: S
+        - AttributeName: GSI1SK
+          AttributeType: S
+        - AttributeName: GSI2PK
+          AttributeType: S
+        - AttributeName: GSI2SK
+          AttributeType: S
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: GSI1
+          KeySchema:
+            - AttributeName: GSI1PK
+              KeyType: HASH
+            - AttributeName: GSI1SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: GSI2
+          KeySchema:
+            - AttributeName: GSI2PK
+              KeyType: HASH
+            - AttributeName: GSI2SK
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  # ==================== Lambda Function ====================
+  MediaTrackerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub MediaTracker-${Environment}
+      Handler: bootstrap
+      CodeUri: .
+      Environment:
+        Variables:
+          USERS_TABLE: !Ref UsersTable
+          MEDIA_TABLE: !Ref MediaTable
+          LIBRARY_TABLE: !Ref LibraryTable
+          JWT_SECRET: !Ref JWTSecret
+          AWS_REGION: !Ref AWS::Region
+          ALLOWED_ORIGINS: '*'
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Sub MediaTracker-*-${Environment}*
+        - Statement:
+            - Sid: AllowDynACrudWildcard
+              Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:Query
+                - dynamodb:Scan
+                - dynamodb:DeleteItem
+                - dynamodb:UpdateItem
+              Resource: !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/MediaTracker-*-${Environment}*
+            - Sid: AllowLogs
+              Effect: Allow
+              Action:
+                - logs:CreateLogGroup
+                - logs:CreateLogStream
+                - logs:PutLogEvents
+              Resource: '*'
+
+  # ==================== API Gateway ====================
+  MediaTrackerApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: prod
+      CorsConfiguration:
+        AllowOrigins:
+          - '*'
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        MaxAge: 86400
+
+Outputs:
+  ApiUrl:
+    Description: Public API endpoint
+    Value: !Sub https://${MediaTrackerApi}.execute-api.${AWS::Region}.amazonaws.com
+  UsersTable:
+    Value: !Ref UsersTable
+  MediaTable:
+    Value: !Ref MediaTable
+  LibraryTable:
+    Value: !Ref LibraryTable
