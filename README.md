@@ -4,6 +4,10 @@
 
 Track your entertainment journey. Log what you're watching/playing, maintain lists, get genre-based recommendations, and view your stats.
 
+> **Version: v1.0.0** · branch `aws-zero-to-shipped` · Last verified run: **Sep 22 2026**.
+> Full change log for this release → `PROJECT_STATUS.md §12`. Step-by-step run/test/
+> showcase guide → `RUN_TEST_SHOWCASE.md`.
+
 > **Built for the AWS Zero to Shipped Hackathon.** Go REST API on Lambda + API Gateway, persistent DynamoDB storage, React frontend on Amplify Hosting, developed with AI coding agents (Amazon Q + OpenCode).
 
 ---

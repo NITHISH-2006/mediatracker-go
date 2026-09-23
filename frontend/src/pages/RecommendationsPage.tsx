@@ -1,24 +1,31 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { VgCard, VgCardContent } from '../components/ui/VgCard';
 import { VgButton } from '../components/ui/VgButton';
 import { VgBadge } from '../components/ui/VgBadge';
+import { Icon } from '../components/ui/Icon';
+import { useToast } from '../context/ToastContext';
 import PageWrapper, { PageHeader } from '../components/layout/PageWrapper';
 import { StaggerContainer, StaggerItem, FadeInUp, ScaleIn } from '../components/animations/PageTransition';
 import { motion } from 'framer-motion';
 import type { RecommendedItem } from '../types';
-import { TYPE_BADGES } from '../types';
 
 export default function RecommendationsPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<RecommendedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { error: toastError } = useToast();
 
   useEffect(() => {
     api
       .getRecommendations()
       .then((res) => setItems(res.recommended_media ?? []))
-      .catch(() => setError('Failed to load recommendations'))
+      .catch(() => {
+        setError('Failed to load recommendations');
+        toastError('Could not load recommendations');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -48,18 +55,16 @@ export default function RecommendationsPage() {
   return (
     <PageWrapper>
       <div className="max-w-5xl mx-auto px-4 py-8 lg:py-12">
-        <PageHeader
-          title="✨ Recommendations"
-          subtitle="Picked for you based on what you watch"
-        />
+        <PageHeader title="Recommendations" subtitle="Picked for you based on what you watch" />
 
         {error && (
           <FadeInUp delay={0.1}>
             <motion.div
-              className="bg-vermilion/20 border border-vermilion/30 rounded-2xl p-4 mb-8"
+              className="bg-vermilion/20 border border-vermilion/30 rounded-2xl p-4 mb-8 flex items-center gap-3"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
+              <Icon icon="x-circle" size={20} className="text-vermilion flex-shrink-0" />
               <p className="text-vermilion">{error}</p>
             </motion.div>
           </FadeInUp>
@@ -72,34 +77,31 @@ export default function RecommendationsPage() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
             >
-              <motion.div
-                className="text-6xl mb-4"
-                animate={{ rotate: [0, -3, 3, 0] }}
-              >
-                🔮
+              <motion.div className="text-sunflower/60 mb-4 inline-flex" animate={{ rotate: [0, -3, 3, 0] }}>
+                <Icon icon="sparkles" size={64} />
               </motion.div>
               <p className="text-text-secondary text-lg mb-4">No recommendations yet</p>
               <p className="text-text-secondary text-sm mb-6 max-w-md mx-auto">
                 Add some media to your library (Completed or Watching) and we'll suggest similar titles based on your taste
               </p>
-              <a href="/search" className="vg-btn vg-btn-primary inline-flex items-center justify-center px-6 py-3 text-base font-semibold">
+              <button onClick={() => navigate('/search')} className="vg-btn vg-btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold">
+                <Icon icon="search" size={18} />
                 Go to Search
-              </a>
+              </button>
             </motion.div>
           </FadeInUp>
         ) : (
           <>
-            {/* Why These Recommendations */}
             <FadeInUp delay={0.1}>
               <VgCard variant="elevated" className="mb-8">
                 <VgCardContent className="p-6">
                   <div className="flex items-center gap-3 mb-4">
                     <motion.div
-                      className="w-12 h-12 rounded-xl bg-gradient-to-br from-sunflower/20 to-orange-500/20 flex items-center justify-center"
+                      className="w-12 h-12 rounded-xl bg-gradient-to-br from-sunflower/20 to-orange-500/20 text-sunflower flex items-center justify-center"
                       animate={{ rotate: [0, -2, 2, 0] }}
                       transition={{ duration: 4, repeat: Infinity }}
                     >
-                      <span className="text-2xl">💡</span>
+                      <Icon icon="sparkles" size={24} />
                     </motion.div>
                     <div>
                       <h3 className="font-display text-xl font-bold text-canvas">Why These Recommendations?</h3>
@@ -112,7 +114,6 @@ export default function RecommendationsPage() {
               </VgCard>
             </FadeInUp>
 
-            {/* Recommendations Grid */}
             <FadeInUp delay={0.2}>
               <StaggerContainer delay={0.08}>
                 {items.map((item, index) => (
@@ -125,24 +126,21 @@ export default function RecommendationsPage() {
               </StaggerContainer>
             </FadeInUp>
 
-            {/* Call to action if few recommendations */}
             {items.length < 3 && (
               <FadeInUp delay={0.3}>
                 <VgCard variant="elevated" className="mt-8">
                   <VgCardContent className="p-6 text-center">
-                    <motion.div
-                      className="text-5xl mb-3"
-                      animate={{ rotate: [0, -3, 3, 0] }}
-                    >
-                      🎨
+                    <motion.div className="text-sunflower/60 mb-3 inline-flex" animate={{ rotate: [0, -3, 3, 0] }}>
+                      <Icon icon="sparkles" size={48} />
                     </motion.div>
                     <h3 className="font-display text-xl font-bold text-canvas mb-2">Want More Recommendations?</h3>
                     <p className="text-text-secondary mb-4">
                       Add more media to your library with different genres to unlock personalized picks
                     </p>
-                    <a href="/search" className="vg-btn vg-btn-primary inline-flex items-center justify-center px-6 py-3 text-base font-semibold">
+                    <button onClick={() => navigate('/search')} className="vg-btn vg-btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 text-base font-semibold">
+                      <Icon icon="search" size={18} />
                       Explore More Media
-                    </a>
+                    </button>
                   </VgCardContent>
                 </VgCard>
               </FadeInUp>
@@ -157,17 +155,18 @@ export default function RecommendationsPage() {
 function RecommendationCard({ item, index }: { item: RecommendedItem; index: number }) {
   const isTop = index === 0;
   const [adding, setAdding] = useState(false);
-  const [added, setAdded] = useState(false);
-  const genreGradient = `linear-gradient(135deg, ${TYPE_BADGES[item.media_type]?.replace('bg-', 'from-').replace('text-', 'to-').replace('border-', 'to-') || 'from-sunflower to-orange-500'})`;
+  const { success: toastSuccess, error: toastError } = useToast();
+  const genreGradient = 'linear-gradient(135deg, rgba(244,211,94,0.35) 0%, rgba(224,122,61,0.35) 55%, rgba(45,106,79,0.45) 100%)';
 
   const handleAdd = async () => {
-    if (added) return;
+    if (adding) return;
     setAdding(true);
     try {
       await api.addToLibrary({ media_id: item.id, status: 'Planned' });
-      setAdded(true);
-    } catch {
-      // keep button in its current state; backend will surface errors via interceptor
+      toastSuccess(`Added "${item.title}" to your Planned list`);
+    } catch (err) {
+      const anyErr = err as { response?: { data?: { error?: string } } };
+      toastError(anyErr.response?.data?.error ?? 'Could not add to library');
     } finally {
       setAdding(false);
     }
@@ -177,7 +176,7 @@ function RecommendationCard({ item, index }: { item: RecommendedItem; index: num
     <VgCard variant={isTop ? 'framed' : 'elevated'} className="overflow-hidden group relative">
       {isTop && (
         <motion.div
-          className="absolute -top-3 -right-3 w-10 h-10 rounded-full bg-gradient-to-br from-sunflower to-orange-500 flex items-center justify-center text-night font-bold text-xs"
+          className="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-gradient-to-br from-sunflower to-orange-500 flex items-center justify-center text-night font-bold text-xs z-10"
           animate={{ scale: [1, 1.05, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
@@ -186,7 +185,6 @@ function RecommendationCard({ item, index }: { item: RecommendedItem; index: num
       )}
 
       <VgCardContent className="p-0">
-        {/* Image area with artistic gradient */}
         <div className="aspect-[16/10] relative overflow-hidden">
           <div className="absolute inset-0" style={{ background: genreGradient }} />
           <div className="absolute inset-0 bg-gradient-to-t from-night/90 via-transparent to-transparent" />
@@ -207,9 +205,9 @@ function RecommendationCard({ item, index }: { item: RecommendedItem; index: num
               {item.media_type.charAt(0).toUpperCase() + item.media_type.slice(1)}
             </VgBadge>
           </div>
-          <div className="absolute top-4 left-4" style={{ opacity: isTop ? 1 : 0.3 }}>
+          <div className="absolute top-4 left-4">
             <motion.div
-              className="w-8 h-8 rounded-full bg-gradient-to-br from-sunflower/20 to-orange-500/20 flex items-center justify-center text-night font-bold text-xs"
+              className="w-8 h-8 rounded-full bg-gradient-to-br from-sunflower/30 to-orange-500/30 flex items-center justify-center text-sunflower font-bold text-xs border border-sunflower/40"
               animate={{ scale: [1, 1.1, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
@@ -223,14 +221,7 @@ function RecommendationCard({ item, index }: { item: RecommendedItem; index: num
             {item.title}
           </h3>
 
-          {/* Match Reason - The "Why" */}
-          <motion.div
-            className="vg-genre-bar mb-4"
-            style={{ height: '6px', background: 'rgba(255,255,255,0.1)' }}
-            initial={{ width: 0 }}
-            animate={{ width: '100%' }}
-            transition={{ duration: 1.2, delay: 0.3, ease: [0.23, 1, 0.32, 1] }}
-          >
+          <div className="vg-genre-bar mb-4" style={{ height: '6px', background: 'rgba(255,255,255,0.1)' }}>
             <div
               className="vg-genre-fill"
               style={{
@@ -238,18 +229,17 @@ function RecommendationCard({ item, index }: { item: RecommendedItem; index: num
                 background: 'linear-gradient(90deg, #f4d35e 0%, #e07a3d 50%, #2d6a4f 100%)',
               }}
             />
-          </motion.div>
+          </div>
 
           <motion.p
             className="text-text-secondary text-sm italic leading-relaxed mb-4"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.5 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
           >
-            "💡 {item.match_reason}"
+            {item.match_reason}
           </motion.p>
 
-          {/* Media info */}
           <div className="flex items-center justify-between pt-3 border-t border-border-subtle/50">
             <div className="flex items-center gap-2 text-sm text-text-secondary">
               <span>{item.media_type.charAt(0).toUpperCase() + item.media_type.slice(1)}</span>
@@ -257,13 +247,14 @@ function RecommendationCard({ item, index }: { item: RecommendedItem; index: num
               <span>{item.genres.slice(0, 2).join(', ')}{item.genres.length > 2 ? '…' : ''}</span>
             </div>
             <VgButton
-              variant="secondary"
+              variant={adding ? 'ghost' : 'secondary'}
               size="sm"
               className="px-3 py-1.5"
               onClick={handleAdd}
-              disabled={adding || added}
+              disabled={adding}
+              leftIcon={adding ? <Icon icon="refresh" size={15} /> : <Icon icon="plus" size={15} />}
             >
-              {added ? '✓ Added' : adding ? 'Adding…' : 'Add to Library'}
+              {adding ? 'Adding…' : 'Add to Library'}
             </VgButton>
           </div>
         </div>

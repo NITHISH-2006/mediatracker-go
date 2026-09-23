@@ -38,6 +38,13 @@ func New(store *storage.Store) *chi.Mux {
 	// Health check
 	r.Get("/health", healthCheck)
 
+	// Friendly root — shows API metadata instead of a bare 404
+	r.Get("/", rootInfo)
+
+	// Graceful JSON 404 for unknown routes
+	r.NotFound(notFoundHandler)
+	r.MethodNotAllowed(methodNotAllowedHandler)
+
 	// ==================== PUBLIC ROUTES ====================
 	r.Post("/api/auth/register", authHandler.Register)
 	r.Post("/api/auth/login", authHandler.Login)
@@ -70,4 +77,22 @@ func New(store *storage.Store) *chi.Mux {
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write([]byte(`{"status":"ok"}`))
+}
+
+// rootInfo describes the live API for anyone hitting the base URL.
+func rootInfo(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"name":"MediaTracker API","version":"1.0","status":"ok","endpoints":{"health":"GET /health","auth":"POST /api/auth/register","login":"POST /api/auth/login","media":"GET /api/media, GET /api/media/search","documentation":"See README.md"}}`))
+}
+
+func notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNotFound)
+	w.Write([]byte(`{"error":"not found","path":"` + r.URL.Path + `"}`))
+}
+
+func methodNotAllowedHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusMethodNotAllowed)
+	w.Write([]byte(`{"error":"method not allowed","path":"` + r.URL.Path + `"}`))
 }

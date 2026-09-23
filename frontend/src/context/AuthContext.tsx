@@ -32,12 +32,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const res = await api.login({ email, password })
     localStorage.setItem('token', res.token)
     setToken(res.token)
-    // Decode user from JWT payload
-    const payload = JSON.parse(atob(res.token.split('.')[1]))
     const user: User = {
-      id: payload.user_id,
-      email: payload.email,
-      username: email.split('@')[0],
+      id: '',
+      email,
+      username: res.username || email.split('@')[0],
       created_at: new Date().toISOString(),
     }
     localStorage.setItem('user', JSON.stringify(user))

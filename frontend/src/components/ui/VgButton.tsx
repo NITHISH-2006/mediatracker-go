@@ -7,8 +7,8 @@ interface VgButtonProps extends HTMLMotionProps<'button'> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'accent' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
   fullWidth?: boolean;
 }
 

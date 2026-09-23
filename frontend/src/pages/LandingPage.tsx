@@ -1,46 +1,57 @@
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import PageWrapper from '@/components/layout/PageWrapper';
-import { VgButton } from '@/components/ui/VgButton';
-import { VgCard, VgCardContent } from '@/components/ui/VgCard';
-import { VgBadge } from '@/components/ui/VgBadge';
-import { FadeInUp, StaggerContainer, StaggerItem, FloatingElement } from '@/components/animations/PageTransition';
+import PageWrapper from '../components/layout/PageWrapper';
+import { VgButton } from '../components/ui/VgButton';
+import { VgCard, VgCardContent } from '../components/ui/VgCard';
+import { VgBadge } from '../components/ui/VgBadge';
+import { Icon, type IconName } from '../components/ui/Icon';
+import { Logo } from '../components/ui/Logo';
+import { useAuth } from '../context/AuthContext';
 
-const features = [
+const features: { icon: IconName; title: string; description: string }[] = [
   {
-    icon: '🎨',
+    icon: 'book',
     title: 'Unified Library',
     description:
-      'Track anime, movies & games in one place with painterly status lists: Watching, Completed, Dropped, or Planned.',
+      'Track anime, movies & games in one place with status lists: Watching, Completed, Dropped, or Planned.',
   },
   {
-    icon: '📊',
+    icon: 'chart',
     title: 'Beautiful Analytics',
     description:
-      'See your completion rate, favorite genres, and media type breakdown with artistic progress bars and rings.',
+      'See your completion rate, favorite genres, and media type breakdown with painterly progress bars and rings.',
   },
   {
-    icon: '🔮',
+    icon: 'sparkles',
     title: 'Smart Recommendations',
     description:
       'Get personalized picks based on what you watch, with "why" reasons like "matches your taste for fantasy".',
   },
 ];
 
-const hotspots = [
-  { icon: '👁️', count: 'Watch', label: 'Log anime, movies & games' },
-  { icon: '📚', count: 'Track', label: 'Progress, notes & status lists' },
-  { icon: '✨', count: 'Discover', label: 'Recommendations just for you' },
+const hotspots: { icon: IconName; count: string; label: string }[] = [
+  { icon: 'eye', count: 'Watch', label: 'Log anime, movies & games' },
+  { icon: 'target', count: 'Track', label: 'Progress, notes & status lists' },
+  { icon: 'compass', count: 'Discover', label: 'Recommendations just for you' },
+];
+
+const stats = [
+  { value: '3', label: 'Media types' },
+  { value: '4', label: 'Watch statuses' },
+  { value: '∞', label: 'Possibilities' },
 ];
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const go = (path: string) => () => navigate(user ? path : '/login');
 
   return (
     <PageWrapper>
       <div className="relative overflow-hidden">
         {/* Hero */}
-        <section className="relative px-4 lg:px-8 pt-28 lg:pt-36 pb-16 lg:pb-24">
+        <section className="relative px-4 lg:px-8 pt-28 lg:pt-40 pb-16 lg:pb-24">
           <motion.div
             className="pointer-events-none absolute top-10 right-0 w-96 h-96 rounded-full bg-gradient-to-br from-sunflower/10 via-orange-500/10 to-transparent blur-3xl"
             animate={{ scale: [1, 1.15, 1], rotate: [0, 30, 0] }}
@@ -54,16 +65,22 @@ export default function LandingPage() {
             aria-hidden="true"
           />
 
-          <FloatingElement intensity={0.6} className="absolute top-24 left-[6%] w-16 h-16 text-sunflower/20">
-            <svg viewBox="0 0 100 100" fill="currentColor">
-              <path d="M50 10 L60 40 L90 40 L65 60 L75 90 L50 75 L25 90 L35 60 L10 40 L40 40 Z" stroke="currentColor" strokeWidth="2" fill="none" />
-            </svg>
-          </FloatingElement>
-          <FloatingElement intensity={0.4} className="absolute bottom-24 right-[8%] w-12 h-12 text-lavender/20">
-            <svg viewBox="0 0 100 100" fill="currentColor">
-              <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="2" fill="none" />
-            </svg>
-          </FloatingElement>
+          <motion.div
+            className="hidden lg:block absolute top-28 left-[6%] text-sunflower/25"
+            animate={{ y: [-6, 6, -6], rotate: [-6, 6, -6] }}
+            transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+            aria-hidden="true"
+          >
+            <Icon icon="brush" size={64} />
+          </motion.div>
+          <motion.div
+            className="hidden lg:block absolute bottom-28 right-[8%] text-emerald/30"
+            animate={{ y: [6, -6, 6], rotate: [6, -6, 6] }}
+            transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+            aria-hidden="true"
+          >
+            <Icon icon="palette" size={52} />
+          </motion.div>
 
           <div className="max-w-4xl mx-auto text-center relative">
             <motion.div
@@ -72,11 +89,14 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
-              <VgBadge variant="genre" size="md">🖌️ A Living Painting</VgBadge>
+              <VgBadge variant="genre" size="md">
+                <Icon icon="brush" size={14} />
+                A Living Painting
+              </VgBadge>
             </motion.div>
 
             <motion.h1
-              className="text-display text-5xl lg:text-7xl font-bold text-canvas leading-tight tracking-tight mb-6"
+              className="font-display text-5xl lg:text-7xl font-bold text-canvas leading-tight tracking-tight mb-6"
               initial={{ opacity: 0, y: 40, rotate: -1 }}
               animate={{ opacity: 1, y: 0, rotate: 0 }}
               transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
@@ -104,100 +124,135 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
             >
-              <VgButton size="lg" onClick={() => navigate('/register')}>
-                Get Started
+              <VgButton size="lg" onClick={go('/dashboard')} rightIcon={<Icon icon="arrow-right" size={18} />}>
+                {user ? 'Open Dashboard' : 'Get Started'}
               </VgButton>
               <VgButton size="lg" variant="secondary" onClick={() => navigate('/search')}>
                 Explore Media
               </VgButton>
             </motion.div>
+
+            <motion.div
+              className="grid grid-cols-3 gap-4 max-w-xl mx-auto mt-12"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+            >
+              {stats.map((s) => (
+                <div key={s.label} className="text-center">
+                  <p className="font-display text-3xl lg:text-4xl font-bold text-sunflower">{s.value}</p>
+                  <p className="text-text-secondary text-sm mt-1">{s.label}</p>
+                </div>
+              ))}
+            </motion.div>
           </div>
         </section>
 
         {/* Hotspot strip */}
-        <FadeInUp delay={0.2}>
-          <section className="px-4 lg:px-8 pb-12">
-            <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {hotspots.map((h) => (
-                <VgCard key={h.label} variant="elevated" className="text-center p-6">
+        <section className="px-4 lg:px-8 pb-14">
+          <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {hotspots.map((h, i) => (
+              <motion.div
+                key={h.label}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-60px' }}
+                transition={{ duration: 0.5, delay: i * 0.1, ease: [0.23, 1, 0.32, 1] }}
+              >
+                <VgCard variant="elevated" className="text-center p-6">
                   <motion.div
-                    className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-sunflower/20 to-orange-500/20 mb-4"
+                    className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-sunflower/20 to-orange-500/20 text-sunflower mb-4"
                     whileHover={{ scale: 1.1, rotate: 3 }}
                   >
-                    <span className="text-2xl">{h.icon}</span>
+                    <Icon icon={h.icon} size={26} />
                   </motion.div>
                   <h3 className="font-display text-2xl font-bold text-sunflower">{h.count}</h3>
                   <p className="text-text-secondary mt-1">{h.label}</p>
                 </VgCard>
-              ))}
-            </div>
-          </section>
-        </FadeInUp>
+              </motion.div>
+            ))}
+          </div>
+        </section>
 
         {/* Features */}
-        <StaggerContainer delay={0.1} className="px-4 lg:px-8 pb-12">
-          <section className="max-w-6xl mx-auto">
-            <FadeInUp>
-              <div className="text-center mb-10">
-                <h2 className="text-display text-3xl lg:text-4xl font-bold text-canvas mb-3">
-                  Why Choose MediaTracker?
-                </h2>
-                <p className="text-text-secondary max-w-2xl mx-auto">
-                  Everything you need to keep your media world in order, without losing the art.
-                </p>
-              </div>
-            </FadeInUp>
+        <section className="px-4 lg:px-8 pb-14">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              className="text-center mb-10"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: '-60px' }}
+              transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+            >
+              <h2 className="font-display text-3xl lg:text-4xl font-bold text-canvas mb-3">
+                Why Choose MediaTracker?
+              </h2>
+              <p className="text-text-secondary max-w-2xl mx-auto">
+                Everything you need to keep your media world in order, without losing the art.
+              </p>
+            </motion.div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-              {features.map((f) => (
-                <StaggerItem key={f.title}>
-                  <VgCard variant="default" hover className="h-full">
+              {features.map((f, i) => (
+                <motion.div
+                  key={f.title}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-60px' }}
+                  transition={{ duration: 0.55, delay: i * 0.12, ease: [0.23, 1, 0.32, 1] }}
+                >
+                  <VgCard variant="default" className="h-full">
                     <VgCardContent className="p-6">
                       <motion.div
-                        className="w-12 h-12 rounded-xl bg-gradient-to-br from-sunflower/20 to-orange-500/20 flex items-center justify-center mb-4"
+                        className="w-12 h-12 rounded-xl bg-gradient-to-br from-sunflower/20 to-orange-500/20 text-sunflower flex items-center justify-center mb-4"
                         whileHover={{ scale: 1.1, rotate: 3 }}
                       >
-                        <span className="text-2xl">{f.icon}</span>
+                        <Icon icon={f.icon} size={24} />
                       </motion.div>
                       <h3 className="font-display text-xl font-bold text-canvas mb-2">{f.title}</h3>
                       <p className="text-text-secondary leading-relaxed">{f.description}</p>
                     </VgCardContent>
                   </VgCard>
-                </StaggerItem>
+                </motion.div>
               ))}
             </div>
-          </section>
-        </StaggerContainer>
+          </div>
+        </section>
 
         {/* Call to action */}
-        <FadeInUp delay={0.15}>
-          <section className="px-4 lg:px-8 pb-20">
+        <section className="px-4 lg:px-8 pb-20">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-60px' }}
+            transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+          >
             <VgCard variant="framed" className="max-w-4xl mx-auto text-center">
               <VgCardContent className="p-10 lg:p-14">
                 <motion.div
-                  className="text-6xl mb-5"
+                  className="inline-flex mb-5"
                   animate={{ rotate: [0, -4, 4, 0], scale: [1, 1.04, 1] }}
                   transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  🎨
+                  <Logo size={72} />
                 </motion.div>
-                <h2 className="text-display text-3xl lg:text-4xl font-bold text-canvas mb-4">
+                <h2 className="font-display text-3xl lg:text-4xl font-bold text-canvas mb-4">
                   Ready to organize your media world?
                 </h2>
                 <p className="text-lg text-text-secondary mb-8 max-w-2xl mx-auto leading-relaxed">
                   Join the canvas — create your library, track your progress, and paint your own media journey.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <VgButton size="lg" onClick={() => navigate('/register')}>
-                  Start Free
-                </VgButton>
-                <VgButton size="lg" variant="ghost" onClick={() => navigate('/login')}>
-                  Sign In
-                </VgButton>
+                  <VgButton size="lg" onClick={go('/register')} rightIcon={<Icon icon="arrow-right" size={18} />}>
+                    {user ? 'Go to Dashboard' : 'Start Free'}
+                  </VgButton>
+                  <VgButton size="lg" variant="ghost" onClick={() => navigate('/login')}>
+                    Sign In
+                  </VgButton>
                 </div>
               </VgCardContent>
             </VgCard>
-          </section>
-        </FadeInUp>
+          </motion.div>
+        </section>
       </div>
     </PageWrapper>
   );

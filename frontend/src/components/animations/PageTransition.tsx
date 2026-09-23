@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 
 export interface PageTransitionProps {
   children: ReactNode;
@@ -7,17 +8,19 @@ export interface PageTransitionProps {
   duration?: number;
 }
 
-export function PageTransition({ children, mode = 'swirl', duration = 0.5 }: PageTransitionProps) {
+export function PageTransition({ children, mode = 'swirl', duration = 0.45 }: PageTransitionProps) {
+  const location = useLocation();
+
   const variants = {
     swirl: {
-      initial: { opacity: 0, scale: 0.8, rotate: -10, filter: 'blur(10px)' },
-      animate: { opacity: 1, scale: 1, rotate: 0, filter: 'blur(0px)' },
-      exit: { opacity: 0, scale: 1.1, rotate: 10, filter: 'blur(10px)' },
+      initial: { opacity: 0, scale: 0.96, y: 12, rotate: -1.5, filter: 'blur(6px)' },
+      animate: { opacity: 1, scale: 1, y: 0, rotate: 0, filter: 'blur(0px)' },
+      exit: { opacity: 0, scale: 1.02, y: -8, rotate: 1, filter: 'blur(6px)' },
     },
     fade: {
-      initial: { opacity: 0 },
-      animate: { opacity: 1 },
-      exit: { opacity: 0 },
+      initial: { opacity: 0, y: 8 },
+      animate: { opacity: 1, y: 0 },
+      exit: { opacity: 0, y: -8 },
     },
     brush: {
       initial: { opacity: 0, clipPath: 'polygon(0 0, 0 0, 0 100%, 0% 100%)' },
@@ -25,9 +28,9 @@ export function PageTransition({ children, mode = 'swirl', duration = 0.5 }: Pag
       exit: { opacity: 0, clipPath: 'polygon(100% 0, 100% 0, 100% 100%, 100% 100%)' },
     },
     slide: {
-      initial: { opacity: 0, x: 50, filter: 'blur(8px)' },
+      initial: { opacity: 0, x: 40, filter: 'blur(6px)' },
       animate: { opacity: 1, x: 0, filter: 'blur(0px)' },
-      exit: { opacity: 0, x: -50, filter: 'blur(8px)' },
+      exit: { opacity: 0, x: -40, filter: 'blur(6px)' },
     },
   };
 
@@ -37,9 +40,9 @@ export function PageTransition({ children, mode = 'swirl', duration = 0.5 }: Pag
   };
 
   return (
-    <AnimatePresence mode="wait">
+    <AnimatePresence mode="wait" initial={false}>
       <motion.div
-        key={Date.now()}
+        key={location.pathname}
         variants={variants[mode]}
         initial="initial"
         animate="animate"

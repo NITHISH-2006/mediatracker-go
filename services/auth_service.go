@@ -77,10 +77,11 @@ func (as *AuthService) Login(req *models.LoginRequest) (*models.LoginResponse, e
 
 	// Generate JWT token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"email":   user.Email,
-		"exp":     time.Now().Add(time.Duration(config.TokenExpiration) * time.Second).Unix(),
-		"iat":     time.Now().Unix(),
+		"user_id":  user.ID,
+		"email":    user.Email,
+		"username": user.Username,
+		"exp":      time.Now().Add(time.Duration(config.TokenExpiration) * time.Second).Unix(),
+		"iat":      time.Now().Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(config.JWTSecret))
@@ -91,6 +92,7 @@ func (as *AuthService) Login(req *models.LoginRequest) (*models.LoginResponse, e
 	return &models.LoginResponse{
 		Token:     tokenString,
 		ExpiresIn: config.TokenExpiration,
+		Username:  user.Username,
 	}, nil
 }
 

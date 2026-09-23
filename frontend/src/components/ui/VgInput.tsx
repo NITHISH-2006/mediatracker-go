@@ -1,4 +1,5 @@
 import { forwardRef } from 'react';
+import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import type { HTMLMotionProps } from 'framer-motion';
 
@@ -6,8 +7,8 @@ interface VgInputProps extends HTMLMotionProps<'input'> {
   label?: string;
   error?: string;
   helperText?: string;
-  leftIcon?: React.ReactNode;
-  rightIcon?: React.ReactNode;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
 }
 
 export const VgInput = forwardRef<HTMLInputElement, VgInputProps>(
@@ -40,7 +41,7 @@ export const VgInput = forwardRef<HTMLInputElement, VgInputProps>(
             ref={ref}
             id={inputId}
             className={`
-              vg-input vg-select
+              vg-input
               ${leftIcon ? 'pl-12' : ''}
               ${rightIcon ? 'pr-12' : ''}
               ${error ? 'border-vermilion focus:border-vermilion focus:ring-vermilion/20' : ''}
@@ -87,7 +88,7 @@ export interface VgTextareaProps extends HTMLMotionProps<'textarea'> {
   label?: string;
   error?: string;
   helperText?: string;
-  leftIcon?: React.ReactNode;
+  leftIcon?: ReactNode;
 }
 
 export const VgTextarea = forwardRef<HTMLTextAreaElement, VgTextareaProps>(
@@ -111,7 +112,7 @@ export const VgTextarea = forwardRef<HTMLTextAreaElement, VgTextareaProps>(
             ref={ref}
             id={textareaId}
             className={`
-              vg-input vg-select min-h-[100px] resize-y
+              vg-input min-h-[100px] resize-y
               ${leftIcon ? 'pl-12' : ''}
               ${error ? 'border-vermilion focus:border-vermilion focus:ring-vermilion/20' : ''}
               ${className}

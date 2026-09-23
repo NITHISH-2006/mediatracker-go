@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ToastProvider } from './context/ToastContext'
+import { PageTransition } from './components/animations/PageTransition'
 import ProtectedRoute from './components/ProtectedRoute'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -13,8 +15,10 @@ import RecommendationsPage from './pages/RecommendationsPage'
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
+      <ToastProvider>
+        <BrowserRouter>
+          <PageTransition>
+            <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
@@ -59,8 +63,10 @@ function App() {
             }
           />
           <Route path="*" element={<LandingPage />} />
-        </Routes>
-      </BrowserRouter>
+          </Routes>
+          </PageTransition>
+        </BrowserRouter>
+      </ToastProvider>
     </AuthProvider>
   )
 }

@@ -1,6 +1,18 @@
 @import "tailwindcss";
 @import "./styles/van-gogh.css";
 
+/*
+ * Decorative full-bleed layers (.vortex-bg, .vortex, .starry-night) intentionally
+ * extend far past the viewport (inset: -50% / huge conic gradients). Without this
+ * clip they inflate documentElement.scrollWidth and force a horizontal scrollbar on
+ * EVERY page at EVERY viewport. overflow-x: clip (not hidden) keeps the clamping
+ * without making html/body a scroll container, so position: sticky still works.
+ */
+html,
+body {
+  overflow-x: clip;
+}
+
 /* Van Gogh Painting Inspired Design System */
 /* Generated for MediaTracker Go - Full Stack Redesign */
 
@@ -52,7 +64,7 @@
 
 /* ============ CANVAS TEXTURE BACKGROUND ============ */
 body {
-  font-family: 'Georgia', 'Cambria Serif', 'Times New Roman', serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-image: 
@@ -121,20 +133,20 @@ body::before {
 
 /*============ TYPOGRAPHY ============*/
 .text-display {
-  font-family: 'Playfair Display', 'Georgia', serif;
-  font-weight: 400;
-  letter-spacing: -0.03em;
-  line-height: 1.3;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
 }
 
 .text-body {
-  font-family: 'Georgia', 'Cambria Serif', serif;
+  font-family: var(--font-body);
   font-size: 0.9375rem;
   line-height: 1.7;
 }
 
 .text-accent {
-  font-family: 'Playfair Display', 'Georgia', serif;
+  font-family: var(--font-accent);
   font-weight: 400;
 }
 
@@ -209,7 +221,7 @@ body::before {
 
 .tab-btn {
   padding: 0.625rem 1.125rem;
-  font-family: 'Georgia', serif;
+  font-family: var(--font-body);
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--color-text-secondary);
@@ -280,9 +292,9 @@ body::before {
   gap: var(--space-xs);
 }
 .form-label {
-  font-family: 'Georgia', serif;
+  font-family: var(--font-body);
   font-size: 0.8125rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--color-text-secondary);
   letter-spacing: 0.01em;
 }

@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { VgCard, VgCardHeader, VgCardFooter } from '@/components/ui/VgCard';
-import { VgBadge } from '@/components/ui/VgBadge';
-import type { LibraryItem, Media } from '@/types';
+import { VgCard, VgCardHeader, VgCardFooter } from '../ui/VgCard';
+import { VgBadge } from '../ui/VgBadge';
+import { Icon, type IconName } from '../ui/Icon';
+import type { LibraryItem, Media } from '../../types';
 
 const STATUSES = ['Watching', 'Completed', 'Dropped', 'Planned'] as const;
 
@@ -12,10 +13,10 @@ const STATUS_STYLES: Record<string, string> = {
   Planned: 'bg-lavender/20 text-lavender-light border-lavender/30',
 };
 
-const typeIconsMap = {
-  anime: '📺',
-  movie: '🎬',
-  game: '🎮',
+const TYPE_ICONS: Record<string, IconName> = {
+  anime: 'book',
+  movie: 'film',
+  game: 'gamepad',
 };
 
 interface LibraryItemCardProps {
@@ -40,6 +41,7 @@ export function LibraryItemCard({
   onRemove,
 }: LibraryItemCardProps) {
   const typeLabel = media?.media_type ? media.media_type.charAt(0).toUpperCase() + media.media_type.slice(1) : 'Media';
+  const typeIcon = TYPE_ICONS[media?.media_type ?? ''] ?? 'archive';
   const statusStylesFor = (s: string) =>
     `px-4 py-2 rounded-xl font-body font-medium text-sm border transition-all duration-300 ${
       item.status === s
@@ -55,19 +57,19 @@ export function LibraryItemCard({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3 flex-wrap">
                 <motion.div
-                  className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sunflower/20 to-orange-500/20 flex items-center justify-center"
+                  className="w-14 h-14 rounded-2xl bg-gradient-to-br from-sunflower/20 to-orange-500/20 text-sunflower flex items-center justify-center"
                   whileHover={{ scale: 1.05 }}
                 >
-                  <span className="text-2xl">{typeIconsMap[media?.media_type as keyof typeof typeIconsMap] || '📦'}</span>
+                  <Icon icon={typeIcon} size={26} />
                 </motion.div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-display text-xl lg:text-2xl font-bold text-canvas truncate">
                     {media?.title ?? 'Unknown media'}
                   </h3>
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                    <VgBadge variant="type" mediaType={media?.media_type as 'anime' | 'movie' | 'game'} size="sm">
                       {typeLabel}
-                    </span>
+                    </VgBadge>
                     {item.status && (
                       <VgBadge status={item.status.toLowerCase() as 'watching' | 'completed' | 'dropped' | 'planned'} size="sm">
                         {item.status}
@@ -82,8 +84,12 @@ export function LibraryItemCard({
                     className="h-10 w-10 rounded-xl bg-canvas/80 text-text-secondary hover:text-sunflower hover:bg-sunflower/10 flex items-center justify-center transition-all duration-300"
                     aria-label={expanded ? 'Collapse' : 'Expand'}
                   >
-                    <motion.span animate={{ rotate: expanded ? 180 : 0 }} transition={{ duration: 0.3 }}>
-                      ▼
+                    <motion.span
+                      className="inline-flex"
+                      animate={{ rotate: expanded ? 180 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Icon icon="chevron-down" size={18} />
                     </motion.span>
                   </button>
 
@@ -92,7 +98,7 @@ export function LibraryItemCard({
                     className="h-10 w-10 rounded-xl bg-canvas/80 text-vermilion hover:text-red-400 hover:bg-vermilion/10 flex items-center justify-center transition-all duration-300"
                     aria-label="Remove from library"
                   >
-                    🗑️
+                    <Icon icon="trash" size={17} />
                   </button>
                 </div>
               </div>

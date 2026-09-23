@@ -79,6 +79,7 @@ type UpdateLibraryRequest struct {
 type LoginResponse struct {
 	Token     string `json:"token"`
 	ExpiresIn int64  `json:"expires_in"` // Seconds
+	Username  string `json:"username"`
 }
 
 // DashboardResponse contains user's statistics and summary

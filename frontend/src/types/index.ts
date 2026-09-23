@@ -29,6 +29,7 @@ export interface LibraryItem {
 export interface LoginResponse {
   token: string
   expires_in: number
+  username?: string
 }
 
 export interface DashboardResponse {
